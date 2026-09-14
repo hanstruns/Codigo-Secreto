@@ -558,9 +558,9 @@
 
 
 
-        const btnOpenViewer = document.getElementById('btnOpenViewer');
+          const btnOpenViewer = document.getElementById('btnOpenViewer');
 
-                // Lógica para abrir el Visor pasando los datos limpios por la URL
+        // Lógica mejorada para elegir entre copiar el enlace al portapapeles o abrir la página
         btnOpenViewer.addEventListener('click', () => {
             // Verificar si ya se han asignado los equipos
             if (!mapaRoles || mapaRoles.length === 0) {
@@ -591,12 +591,26 @@
             parametros.set('p', stringPalabras);
             parametros.set('r', stringRoles);
 
-            // 5. Construir el enlace final apuntando a tu archivo visor.html
-            const urlFinal = `tabla.html?${parametros.toString()}`;
+            // 5. Construir el enlace completo absoluto para que se pueda compartir bien por redes/WhatsApp
+            const urlFinal = `${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))}/tabla.html?${parametros.toString()}`;
 
-            // 6. Abrir el visor en una pestaña nueva del navegador
-            window.open(urlFinal, '_blank');
+            // 6. Preguntar al usuario mediante una ventana interactiva
+            const opcionCopiar = confirm("¿Quieres COPIAR el link para pasarlo a tus compañeros de juego?\n\n(Pulsa 'Aceptar' para copiar el enlace. Pulsa 'Cancelar' para abrir la página directamente).");
+
+            if (opcionCopiar) {
+                // Opción A: Copiar el enlace al portapapeles usando la API del navegador
+                navigator.clipboard.writeText(urlFinal).then(() => {
+                    alert("¡Enlace copiado con éxito! Ya puedes pegarlo y enviarlo a tus amigos.");
+                }).catch(err => {
+                    // Alternativa de seguridad por si el móvil bloquea el copiado automático
+                    alert("No se pudo copiar automáticamente. Aquí tienes el enlace:\n\n" + urlFinal);
+                });
+            } else {
+                // Opción B: Abrir la pantalla del juego en una nueva pestaña
+                window.open(urlFinal, '_blank');
+            }
         });
+
 
     </script>
 </body>
