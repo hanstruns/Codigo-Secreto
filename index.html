@@ -424,57 +424,81 @@
         else celda.classList.add('reveal-purple');
     });
 
-    // Descarga como imagen PNG compatible con móviles
-    btnDownload.addEventListener('click', () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        const width = 750;
-        const height = 500;
-        canvas.width = width;
-        canvas.height = height;
-        
-        const filas = 5;
-        const columnas = 5;
-        const cellWidth = width / columnas;
-        const cellHeight = height / filas;
+ // Descarga como foto PNG adaptando el tamaño del texto para que no se corte
+        btnDownload.addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Imagen de descarga con excelente calidad
+            const width = 1200;
+            const height = 800;
+            canvas.width = width;
+            canvas.height = height;
+            
+            const filas = 5;
+            const columnas = 5;
+            const cellWidth = width / columnas;
+            const cellHeight = height / filas;
 
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, width, height);
+            // Fondo blanco
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, width, height);
 
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 3;
-        ctx.fillStyle = 'black';
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+            // Estilo de los bordes
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 5;
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
 
-        for (let i = 0; i < celdas.length; i++) {
-            const r = Math.floor(i / columnas);
-            const c = i % columnas;
-            const x = c * cellWidth;
-            const y = r * cellHeight;
-            const palabra = celdas[i].textContent.toUpperCase();
+            for (let i = 0; i < celdas.length; i++) {
+                const r = Math.floor(i / columnas);
+                const c = i % columnas;
+                const x = c * cellWidth;
+                const y = r * cellHeight;
+                const palabra = celdas[i].textContent.toUpperCase().trim();
 
-            ctx.strokeRect(x, y, cellWidth, cellHeight);
-            ctx.fillText(palabra, x + cellWidth / 2, y + cellHeight / 2);
-        }
+                // Dibujar el cuadro negro de la celda
+                ctx.strokeRect(x, y, cellWidth, cellHeight);
 
-        const link = document.createElement('a');
-        link.download = 'tablero-codigo-secreto-bn.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    });
+                // Configurar tamaño de letra por defecto
+                let fontSize = 26;
+                ctx.font = `bold ${fontSize}px Arial`;
 
-    // Volver a Empezar Partida
-    btnRestart.addEventListener('click', () => {
-        if (radioManual.checked) {
-            document.querySelectorAll('.manual-word-input').forEach(input => input.value = '');
-        }
-        mapaRoles = [];
-        gameSection.classList.add('hidden');
-        setupSection.classList.remove('hidden');
-    });
+                // Si la palabra es muy larga o tiene un espacio, evaluamos partirla
+                const palabrasDivididas = palabra.split(" ");
+                
+                // Margen de seguridad dentro de la celda para que no toque las líneas
+                const maxTextWidth = cellWidth - 20; 
+
+                if (palabrasDivididas.length > 1 && ctx.measureText(palabra).width > maxTextWidth) {
+                    // Caso 1: Tiene espacios (ej. "CENTRO COMERCIAL"). Lo dibujamos en dos líneas
+                    fontSize = 22; // Achicamos un poco por seguridad
+                    ctx.font = `bold ${fontSize}px Arial`;
+                    
+                    const linea1 = palabrasDivididas[0];
+                    const linea2 = palabrasDivididas.slice(1).join(" "); // Por si tiene más de dos palabras
+                    
+                    // Calculamos las alturas para centrar ambas líneas
+                    const centroY = y + cellHeight / 2;
+                    ctx.fillText(linea1, x + cellWidth / 2, centroY - (fontSize / 1.5));
+                    ctx.fillText(linea2, x + cellWidth / 2, centroY + (fontSize / 1.5));
+                } else {
+                    // Caso 2: Es una sola palabra muy larga. Reducimos la letra dinámicamente si no cabe
+                    while (ctx.measureText(palabra).width > maxTextWidth && fontSize > 12) {
+                        fontSize -= 1;
+                        ctx.font = `bold ${fontSize}px Arial`;
+                    }
+                    ctx.fillText(palabra, x + cellWidth / 2, y + cellHeight / 2);
+                }
+            }
+
+            // Descargar la imagen final en formato PNG limpio
+            const link = document.createElement('a');
+            link.download = 'tablero-codigo-secreto.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
     </script>
 </body>
 </html>
