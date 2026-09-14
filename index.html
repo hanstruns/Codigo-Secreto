@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Código Secreto</title>
+    <style>
+                /* Ocupar toda la pantalla y centrar el contenido */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 { 
+            color: #333; 
+            margin: 10px 0;
+            font-size: 2.5rem; /* Título más grande */
+        }
+        
+        /* Tarjetas de juego expandidas al 95% de la pantalla */
+        .setup-section, .game-section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            margin-bottom: 20px;
+            width: 95%;
+            max-width: 1200px; /* Límite máximo para que no se deforme en pantallas gigantes */
+            text-align: center;
+            box-sizing: border-box;
+        }
+        
+        .hidden { 
+            display: none !important; 
+        }
+        
+        /* Grid de inputs manuales más amplio y cómodo */
+        .inputs-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin: 25px 0;
+            width: 100%;
+        }
+        .inputs-grid input {
+            width: 100%;
+            padding: 12px 6px;
+            text-align: center;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px; /* Letra de inputs más grande */
+        }
+        
+        /* Botones de acción más grandes y llamativos */
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 6px;
+            margin: 8px;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        button:hover { 
+            background-color: #45a049; 
+            transform: scale(1.02);
+        }
+        .btn-blue { background-color: #007BFF; }
+        .btn-blue:hover { background-color: #0056b3; }
+        .btn-red { background-color: #DC3545; }
+        .btn-red:hover { background-color: #bd2130; }
+        
+        /* TABLA GIGANTE: Ocupa todo el ancho disponible */
+        table {
+            border-collapse: collapse;
+            margin: 25px auto;
+            background: white;
+            width: 100%;
+            height: 60vh; /* Ocupa el 60% de la altura de la pantalla de juego */
+        }
+        
+        /* Celdas gigantes con letras muy grandes */
+        td {
+            width: 20%;
+            height: 20%; /* Distribuye las 5 filas equitativamente */
+            border: 3.5px solid #222; /* Bordes más gruesos y visibles */
+            text-align: center;
+            font-weight: 900;
+            font-size: 24px; /* Letra el doble de grande para leer de lejos */
+            cursor: pointer;
+            text-transform: uppercase;
+            padding: 10px;
+            word-break: break-word;
+            transition: background 0.2s, color 0.2s;
+            box-sizing: border-box;
+            user-select: none; /* Evita que se seleccione el texto al hacer doble clic rápido */
+        }
+        
+        /* Colores del Modo Espía (Letra con colores más vivos) */
+        td.text-red { color: #ff1a1a; }
+        td.text-blue { color: #0066ff; }
+        td.text-gray { color: #888888; }
+        td.text-black { color: #000000; }
+
+        /* Colores al Revelar (Fondos completos al pulsar) */
+        td.reveal-red { background-color: #DC3545 !important; color: white !important; }
+        td.reveal-blue { background-color: #007BFF !important; color: white !important; }
+        td.reveal-gray { background-color: #666666 !important; color: white !important; }
+        td.reveal-purple { background-color: #8A2BE2 !important; color: white !important; }
+
+    </style>
+</head>
+<body>
+
+    <h1>Juego: Código Secreto</h1>
+
+    <!-- SECCIÓN 1: Configuración e Inicio -->
+    <div id="setupSection" class="setup-section">
+        <h3>Configuración de Palabras</h3>
+        <label><input type="radio" name="wordMode" value="random" checked> Palabras Aleatorias</label>
+        <label style="margin-left: 20px;"><input type="radio" name="wordMode" value="manual"> Manual</label>
+        
+        <div id="manualInputs" class="inputs-grid hidden">
+            <!-- Se generarán 25 inputs aquí mediante JS -->
+        </div>
+        
+        <br><br>
+        <button id="btnStart">Generar Tablero</button>
+    </div>
+
+    <!-- SECCIÓN 2: El Juego -->
+    <div id="gameSection" class="game-section hidden">
+        <div id="actionButtons">
+            <button id="btnAssignTeams" class="btn-blue">Revelar Equipos (Espías)</button>
+            <button id="btnDownload" class="btn-red">Descargar Tablero (B&N)</button>
+            <button id="btnRestart">Volver a Empezar</button>
+        </div>
+
+        <table id="secretTable">
+            <tr><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        </table>
+    </div>
+
+    <script>
+        const bancoPalabras = [
+    // Animales
+    "Gato", "Perro", "Caballo", "Vaca", "Cerdo", "Oveja", "Cabra", "Gallina", "Gallo", "Pato",
+    "Pájaro", "Águila", "Búho", "Paloma", "Cuervo", "Pingüino", "Flamenco", "Cisne", "Pavo",
+    "Loro", "Canario", "Avestruz", "Tucán", "Murciélago", "Mariposa", "Abeja", "Avispa", "Hormiga",
+    "Araña", "Escorpión", "Mosquito", "Mosca", "Saltamontes", "Caracol", "Gusano", "Serpiente",
+    "Cocodrilo", "Tortuga", "Lagarto", "Iguana", "Rana", "Sapo", "Delfín", "Ballena", "Tiburón",
+    "Pulpo", "Calamar", "Cangrejo", "Langosta", "Medusa", "Pez", "Caballito de mar", "Estrella de mar",
+    "León", "Tigre", "Leopardo", "Guepardo", "Elefante", "Jirafa", "Cebra", "Rinoceronte", "Hipopótamo",
+    "Mono", "Gorila", "Chimpancé", "Orangután", "Panda", "Koala", "Canguro", "Oso", "Lobo", "Zorro",
+    "Ciervo", "Jabalí", "Erizo", "Conejo", "Hámster", "Ratón", "Rata", "Ardilla", "Castor", "Mapache",
+    "Nutria", "Perezoso", "Camello", "Dromedario", "Llama", "Alpaca", "Burro", "Mula", "Reno",
+
+    // Comida
+    "Manzana", "Plátano", "Naranja", "Limón", "Fresa", "Frambuesa", "Mora", "Cereza", "Melocotón",
+    "Pera", "Uva", "Sandía", "Melón", "Piña", "Mango", "Papaya", "Kiwi", "Coco", "Granada",
+    "Mandarina", "Pomelo", "Higo", "Ciruela", "Albaricoque", "Tomate", "Patata", "Zanahoria",
+    "Cebolla", "Ajo", "Lechuga", "Pepino", "Pimiento", "Calabaza", "Berenjena", "Brócoli",
+    "Espinaca", "Maíz", "Guisante", "Champiñón", "Judía", "Lenteja", "Garbanzos", "Arroz", "Pasta",
+    "Espaguetis", "Macarrones", "Pizza", "Hamburguesa", "Perrito caliente", "Bocadillo", "Sándwich",
+    "Taco", "Burrito", "Nachos", "Sushi", "Paella", "Tortilla", "Croqueta", "Albóndiga", "Filete",
+    "Pollo", "Pescado", "Salchicha", "Queso", "Jamón", "Bacon", "Pan", "Tostada", "Galleta",
+    "Chocolate", "Caramelo", "Helado", "Pastel", "Tarta", "Donut", "Churro", "Magdalena", "Flan",
+    "Yogur", "Mermelada", "Mantequilla", "Miel", "Palomitas", "Patatas fritas", "Sopa", "Gazpacho",
+
+    // Bebidas
+    "Agua", "Leche", "Café", "Té", "Zumo", "Refresco", "Batido", "Chocolate caliente", "Limonada",
+    "Granizado", "Smoothie", "Cerveza", "Vino", "Champán", "Cóctel",
+
+    // Naturaleza
+    "Sol", "Luna", "Estrella", "Planeta", "Cielo", "Nube", "Lluvia", "Nieve", "Hielo", "Granizo",
+    "Tormenta", "Rayo", "Trueno", "Arcoíris", "Viento", "Huracán", "Tornado", "Volcán", "Terremoto",
+    "Ola", "Mar", "Océano", "Río", "Lago", "Cascada", "Fuente", "Playa", "Isla", "Desierto",
+    "Montaña", "Colina", "Valle", "Bosque", "Selva", "Pradera", "Campo", "Cueva", "Acantilado",
+    "Piedra", "Roca", "Arena", "Barro", "Tierra", "Hierba", "Flor", "Árbol", "Hoja", "Rama",
+    "Raíz", "Semilla", "Planta", "Cactus", "Palmera", "Pino", "Rosa", "Tulipán", "Girasol",
+    "Margarita", "Diente de león", "Seta",
+
+    // Objetos cotidianos
+    "Mesa", "Silla", "Sofá", "Cama", "Armario", "Estantería", "Escritorio", "Puerta", "Ventana",
+    "Espejo", "Lámpara", "Reloj", "Almohada", "Manta", "Toalla", "Cortina", "Alfombra", "Cojín",
+    "Vaso", "Taza", "Plato", "Cuenco", "Botella", "Cuchara", "Tenedor", "Cuchillo", "Sartén",
+    "Olla", "Tostadora", "Microondas", "Nevera", "Horno", "Lavadora", "Aspiradora", "Escoba",
+    "Fregona", "Cubo", "Jabón", "Champú", "Cepillo", "Peine", "Esponja", "Papel", "Tijeras",
+    "Pegamento", "Cinta adhesiva", "Caja", "Bolsa", "Mochila", "Maleta", "Cartera", "Llave",
+    "Candado", "Paraguas", "Linterna", "Vela", "Mechero", "Martillo", "Destornillador", "Alicates",
+    "Cuerda", "Cubo de basura", "Ventilador", "Radiador",
+
+    // Escuela y oficina
+    "Libro", "Lápiz", "Bolígrafo", "Rotulador", "Goma", "Sacapuntas", "Regla", "Compás", "Tijeras",
+    "Cuaderno", "Carpeta", "Mochila", "Pizarra", "Tiza", "Pupitre", "Diccionario", "Mapa", "Globo",
+    "Calculadora", "Impresora", "Fotocopiadora", "Ordenador", "Teclado", "Ratón", "Pantalla",
+    "Proyector", "Auriculares", "Micrófono", "Cámara", "Teléfono", "Móvil", "Tablet", "Cargador",
+    "Cable", "Batería", "USB", "Enchufe", "Internet", "Correo", "Documento", "Carpeta",
+
+    // Tecnología
+    "Ordenador", "Portátil", "Móvil", "Tablet", "Televisión", "Consola", "Mando", "Videoconsola",
+    "Joystick", "Altavoz", "Auriculares", "Micrófono", "Cámara", "Dron", "Robot", "Servidor",
+    "Internet", "WiFi", "Bluetooth", "Aplicación", "Videojuego", "Contraseña", "Pantalla", "Teclado",
+    "Ratón", "Procesador", "Memoria", "Disco duro", "Batería", "Cargador", "Cable", "Código",
+    "Programa", "Algoritmo", "Página web", "Correo electrónico", "Mensaje", "Emoji", "Fotografía",
+    "Vídeo", "Selfie", "Streaming", "Podcast",
+
+    // Transporte
+    "Coche", "Taxi", "Autobús", "Camión", "Furgoneta", "Moto", "Motocicleta", "Bicicleta", "Patinete",
+    "Tren", "Metro", "Tranvía", "Avión", "Helicóptero", "Barco", "Velero", "Submarino", "Yate",
+    "Lancha", "Canoa", "Kayak", "Cohete", "Nave espacial", "Tractor", "Ambulancia", "Bomberos",
+    "Policía", "Camión de basura", "Caravana", "Monopatín", "Globo aerostático", "Teleférico",
+    "Semáforo", "Volante", "Rueda", "Motor", "Gasolinera", "Carretera", "Autopista", "Túnel",
+    "Puente", "Estación", "Aeropuerto", "Puerto",
+
+    // Lugares
+    "Casa", "Piso", "Mansión", "Castillo", "Palacio", "Hotel", "Hostal", "Restaurante", "Bar",
+    "Cafetería", "Supermercado", "Tienda", "Mercado", "Centro comercial", "Cine", "Teatro",
+    "Museo", "Biblioteca", "Escuela", "Universidad", "Hospital", "Farmacia", "Banco", "Oficina",
+    "Iglesia", "Catedral", "Ayuntamiento", "Comisaría", "Cárcel", "Estadio", "Gimnasio", "Piscina",
+    "Parque", "Zoológico", "Acuario", "Plaza", "Calle", "Avenida", "Carretera", "Estación",
+    "Aeropuerto", "Playa", "Montaña", "Isla", "Granja", "Fábrica", "Laboratorio", "Desierto",
+    "Selva", "Bosque", "Cueva", "Faro", "Camping",
+
+    // Profesiones
+    "Médico", "Enfermero", "Dentista", "Veterinario", "Profesor", "Maestro", "Policía", "Bombero",
+    "Astronauta", "Piloto", "Marinero", "Capitán", "Cocinero", "Camarero", "Panadero", "Carpintero",
+    "Fontanero", "Electricista", "Mecánico", "Albañil", "Arquitecto", "Ingeniero", "Abogado",
+    "Juez", "Detective", "Periodista", "Fotógrafo", "Actor", "Actriz", "Cantante", "Músico",
+    "Pintor", "Escultor", "Escritor", "Director", "Programador", "Diseñador", "Científico",
+    "Investigador", "Astrónomo", "Biólogo", "Químico", "Psicólogo", "Chef", "Jardinero", "Granjero",
+    "Pescador", "Entrenador", "Árbitro", "Presentador", "Mago", "Payaso", "Rey", "Reina",
+
+    // Personas y personajes
+    "Bebé", "Niño", "Niña", "Adolescente", "Adulto", "Anciano", "Pirata", "Ninja", "Samurái",
+    "Caballero", "Princesa", "Príncipe", "Rey", "Reina", "Mago", "Bruja", "Fantasma", "Vampiro",
+    "Momia", "Zombie", "Monstruo", "Gigante", "Enano", "Superhéroe", "Villano", "Espía", "Detective",
+    "Astronauta", "Alienígena", "Robot", "Ángel", "Demonio", "Sirena", "Hada", "Duende", "Dragón",
+
+    // Fantasía
+    "Dragón", "Unicornio", "Sirena", "Hada", "Duende", "Gigante", "Troll", "Orco", "Elfo",
+    "Vampiro", "Zombie", "Fantasma", "Momia", "Esqueleto", "Bruja", "Mago", "Hechizo", "Poción",
+    "Varita", "Espada", "Escudo", "Armadura", "Corona", "Trono", "Tesoro", "Cofre", "Mapa del tesoro",
+    "Pirata", "Barco pirata", "Isla desierta", "Castillo encantado", "Cueva", "Mazmorra", "Dragón",
+    "Caldero", "Cristal mágico", "Portal", "Gárgola", "Sirena", "Grifo", "Fénix",
+
+    // Deportes
+    "Fútbol", "Baloncesto", "Tenis", "Pádel", "Voleibol", "Béisbol", "Balonmano", "Rugby",
+    "Golf", "Hockey", "Boxeo", "Karate", "Judo", "Taekwondo", "Atletismo", "Natación",
+    "Ciclismo", "Gimnasia", "Esgrima", "Surf", "Esquí", "Snowboard", "Patinaje", "Escalada",
+    "Senderismo", "Running", "Maratón", "Triatlón", "Automovilismo", "Motociclismo", "Fórmula 1",
+    "Rally", "Kárate", "Lucha libre", "Tiro con arco", "Equitación", "Hípica", "Bádminton",
+    "Ping-pong", "Críquet", "Waterpolo", "Remo", "Piragüismo", "Vela", "Skate", "BMX",
+    "Salto de altura", "Salto de longitud", "Lanzamiento de jabalina", "Lanzamiento de disco",
+    "Carrera de relevos", "Portero", "Delantero", "Árbitro", "Entrenador", "Estadio",
+    "Balón", "Trofeo", "Medalla", "Copa", "Podio", "Campeonato", "Olimpiadas",
+    "Penalti", "Gol", "Canasta", "Raqueta", "Pelota", "Red", "Pista", "Campo",
+    "Piscina", "Bicicleta", "Casco", "Guantes de boxeo", "Zapatillas deportivas",
+    ];
+
+
+
+
+
+
+
+
+
+
+        let mapaRoles = []; 
+        const totalCeldas = 25;
+
+        const radioRandom = document.querySelector('input[value="random"]');
+        const radioManual = document.querySelector('input[value="manual"]');
+        const manualInputsDiv = document.getElementById('manualInputs');
+        const setupSection = document.getElementById('setupSection');
+        const gameSection = document.getElementById('gameSection');
+        const btnStart = document.getElementById('btnStart');
+        const btnAssignTeams = document.getElementById('btnAssignTeams');
+        const btnDownload = document.getElementById('btnDownload');
+        const btnRestart = document.getElementById('btnRestart');
+        const tabla = document.getElementById('secretTable');
+        const celdas = tabla.getElementsByTagName('td');
+
+        // Inicializar los inputs manuales
+        for (let i = 0; i < totalCeldas; i++) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = `Palabra ${i + 1}`;
+            input.className = 'manual-word-input';
+            manualInputsDiv.appendChild(input);
+        }
+
+        radioRandom.addEventListener('change', () => manualInputsDiv.classList.add('hidden'));
+        radioManual.addEventListener('change', () => manualInputsDiv.classList.remove('hidden'));
+
+        function mezclar(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        btnStart.addEventListener('click', () => {
+            let palabras = [];
+
+            if (radioRandom.checked) {
+                if (bancoPalabras.length < totalCeldas) {
+                    alert("No hay suficientes palabras en el banco.");
+                    return;
+                }
+                const bancoCopia = [...bancoPalabras];
+                mezclar(bancoCopia);
+                palabras = bancoCopia.slice(0, totalCeldas);
+            } else {
+                const inputs = document.querySelectorAll('.manual-word-input');
+                let validas = true;
+                const setUnicas = new Set();
+
+                inputs.forEach(input => {
+                    const texto = input.value.trim();
+                    if (!texto) validas = false;
+                    setUnicas.add(texto.toLowerCase());
+                });
+
+                if (!validas) {
+                    alert("Por favor, rellena las 25 palabras.");
+                    return;
+                }
+                if (setUnicas.size < totalCeldas) {
+                    alert("Las palabras no se pueden repetir.");
+                    return;
+                }
+
+                inputs.forEach(input => palabras.push(input.value.trim()));
+            }
+
+            for (let i = 0; i < celdas.length; i++) {
+                celdas[i].textContent = palabras[i];
+                celdas[i].className = ''; 
+                celdas[i].dataset.index = i; 
+            }
+
+            mapaRoles = Array(totalCeldas).fill('neutral'); 
+            setupSection.classList.add('hidden');
+            gameSection.classList.remove('hidden');
+        });
+
+        btnAssignTeams.addEventListener('click', () => {
+            const empiezaRojo = Math.random() < 0.5;
+            const numRojo = empiezaRojo ? 9 : 8;
+            const numAzul = empiezaRojo ? 8 : 9;
+
+            let roles = [];
+            for (let i = 0; i < numRojo; i++) roles.push('Rojo');
+            for (let i = 0; i < numAzul; i++) roles.push('Azul');
+            roles.push('Gris');
+            while (roles.length < totalCeldas) roles.push('Neutral');
+
+            mezclar(roles);
+            mapaRoles = roles;
+
+            for (let i = 0; i < celdas.length; i++) {
+                celdas[i].className = '';
+                if (mapaRoles[i] === 'Rojo') celdas[i].classList.add('text-red');
+                else if (mapaRoles[i] === 'Azul') celdas[i].classList.add('text-blue');
+                else if (mapaRoles[i] === 'Gris') celdas[i].classList.add('text-black');
+                else celdas[i].classList.add('text-gray');
+            }
+            
+            alert(`¡Equipos asignados! Inicia el equipo ${empiezaRojo ? 'ROJO' : 'AZUL'} (tiene 9 palabras).`);
+        });
+
+      // Evento de clic unificado: pinta la celda y la limpia si vuelves a pulsar
+    tabla.addEventListener('click', (e) => {
+        const celda = e.target;
+        if (celda.tagName !== 'TD') return;
+
+        const idx = celda.dataset.index;
+        if (idx === undefined || mapaRoles.length === 0) return; 
+
+        const rol = mapaRoles[idx];
+        const clasesRevelado = ['reveal-red', 'reveal-blue', 'reveal-gray', 'reveal-purple'];
+
+        // Comprobamos si ya tiene algún color de fondo puesto
+        let yaTieneColor = false;
+        clasesRevelado.forEach(clase => {
+            if (celda.classList.contains(clase)) {
+                yaTieneColor = true;
+            }
+        });
+
+        // Si ya tiene color, se lo quitamos todo (vuelve a su estado normal)
+        if (yaTieneColor) {
+            celda.classList.remove(...clasesRevelado);
+            return;
+        }
+
+        // Si no tiene color, le ponemos el que le toca
+        if (rol === 'Rojo') celda.classList.add('reveal-red');
+        else if (rol === 'Azul') celda.classList.add('reveal-blue');
+        else if (rol === 'Gris') celda.classList.add('reveal-gray');
+        else celda.classList.add('reveal-purple');
+    });
+
+    // Descarga como imagen PNG compatible con móviles
+    btnDownload.addEventListener('click', () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const width = 750;
+        const height = 500;
+        canvas.width = width;
+        canvas.height = height;
+        
+        const filas = 5;
+        const columnas = 5;
+        const cellWidth = width / columnas;
+        const cellHeight = height / filas;
+
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 3;
+        ctx.fillStyle = 'black';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        for (let i = 0; i < celdas.length; i++) {
+            const r = Math.floor(i / columnas);
+            const c = i % columnas;
+            const x = c * cellWidth;
+            const y = r * cellHeight;
+            const palabra = celdas[i].textContent.toUpperCase();
+
+            ctx.strokeRect(x, y, cellWidth, cellHeight);
+            ctx.fillText(palabra, x + cellWidth / 2, y + cellHeight / 2);
+        }
+
+        const link = document.createElement('a');
+        link.download = 'tablero-codigo-secreto-bn.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+
+    // Volver a Empezar Partida
+    btnRestart.addEventListener('click', () => {
+        if (radioManual.checked) {
+            document.querySelectorAll('.manual-word-input').forEach(input => input.value = '');
+        }
+        mapaRoles = [];
+        gameSection.classList.add('hidden');
+        setupSection.classList.remove('hidden');
+    });
+    </script>
+</body>
+</html>
